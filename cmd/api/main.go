@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"blacklight.forstes.github.com/internal/data"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
@@ -27,6 +28,7 @@ type config struct {
 type application struct {
 	config config
 	logger *log.Logger
+	models data.Models
 }
 
 func main() {
@@ -58,7 +60,9 @@ func main() {
 	app := &application{
 		config: cfg,
 		logger: logger,
+		models: data.NewModels(db),
 	}
+
 	srv := &http.Server{
 		Addr:         fmt.Sprintf("localhost:%d", cfg.port),
 		Handler:      app.routes(),
