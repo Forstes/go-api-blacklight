@@ -83,9 +83,38 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 }
 
 func (m MovieModel) Update(movie *Movie) error {
-	return nil
+	query := `
+	UPDATE movies
+	SET title = $1, year = $2, runtime = $3, genres = $4, version = gen_random_uuid()
+	WHERE id = $5
+	RETURNING version`
+
+	args := []any{
+		movie.Title,
+		movie.Year,
+		movie.Runtime,
+		movie.Genres,
+		movie.ID,
+	}
+
+	return m.DB.QueryRow(context.Background(), query, args...).Scan(&movie.Version)
 }
 
 func (m MovieModel) Delete(id int64) error {
+	if id < 1 {
+		return ErrRecordNotFound
+	}
+
+	query := `DELETE FROM movies WHERE id = $1`
+
+	result, err := m.DB.Exec(context.Background(), query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return ErrRecordNotFound
+	}
 	return nil
 }
