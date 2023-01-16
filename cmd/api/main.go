@@ -4,12 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
 
 	"blacklight.forstes.github.com/internal/data"
+	"blacklight.forstes.github.com/internal/jsonlog"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
@@ -27,17 +27,17 @@ type config struct {
 }
 type application struct {
 	config config
-	logger *log.Logger
+	logger *jsonlog.Logger
 	models data.Models
 }
 
 func main() {
 	var cfg config
-	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 
 	err := godotenv.Load(".env.local")
 	if err != nil {
-		logger.Fatal("Error loading .env file")
+		logger.PrintFatal(err, nil)
 	}
 
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
@@ -51,11 +51,11 @@ func main() {
 
 	db, err := openDB(cfg)
 	if err != nil {
-		logger.Fatal(err)
+		logger.PrintFatal(err, nil)
 	}
 
 	defer db.Close()
-	logger.Printf("database connection pool established")
+	logger.PrintInfo("database connection pool established", nil)
 
 	app := &application{
 		config: cfg,
@@ -71,9 +71,12 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	logger.Printf("starting %s server on %s", cfg.env, srv.Addr)
+	logger.PrintInfo("starting server", map[string]string{
+		"addr": srv.Addr,
+		"env":  cfg.env,
+	})
 	err = srv.ListenAndServe()
-	logger.Fatal(err)
+	logger.PrintFatal(err, nil)
 }
 
 func openDB(cfg config) (*pgxpool.Pool, error) {
